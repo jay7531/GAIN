@@ -421,7 +421,7 @@ def main(args):
     print_summary_table(all_results, param_info)
 
     # ── 그래프 저장 ───────────────────────────────────────────────
-    plot_results(all_results, param_info, save_path='results_full.png')
+    plot_results(all_results, param_info, save_path='images/results_full.png')
 
     return all_results
 

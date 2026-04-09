@@ -38,7 +38,7 @@ You can download original paper[1] below here(https://arxiv.org/abs/1806.02920).
 ### Process and Result
 - 2026.04.06. GAIN 원본 코드 다운 및 성능 확인, Wasserstein Loss 적용 및 성능 비교. Fig 1
 - 2026.04.07. Knowledge Distillation 적용 및 성능 비교, Tunning(critic 개선, alpha 수정). Fig 2-4
-- 2026.04.09. GAIN 원본 논문을 참조하여 데이터셋과 비교용 classic imputation method(Auto Encoder, MissForest)를 추가. Fig 5
+- 2026.04.09. GAIN 원본 논문을 참조하여 데이터셋과 비교용 classic imputation method(Auto Encoder, MissForest)를 추가. Fig 5-6
 
 ![Fig 1.](images/WGAN.png)
 Fig 1.
@@ -60,6 +60,8 @@ Fig 5. (a)
 Fig 5. (b)
 ![Fig 5. (c)](images/3.png)
 Fig 5. (c)
+![results_full.png](images/results_full.png)
+Fig 6.
 
 ### Reference
 [1] Jinsung Yoon, James Jordon and Mihaela van der Schaar, "GAIN: Missing Data Imputation using Generative Adversarial Nets", ICML 2018, [Online] available https://arxiv.org/abs/1806.02920
