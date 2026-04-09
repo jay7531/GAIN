@@ -37,8 +37,10 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.net = nn.Sequential(
             nn.Linear(dim * 2, h_dim),
+            nn.LayerNorm(h_dim),
             nn.ReLU(),
             nn.Linear(h_dim, h_dim),
+            nn.LayerNorm(h_dim),
             nn.ReLU(),
             nn.Linear(h_dim, dim)
             # Sigmoid 없음 — WGAN 핵심
