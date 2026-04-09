@@ -47,9 +47,9 @@ You can download original paper[1] below here(https://arxiv.org/abs/1806.02920).
 ![Fig 3. (b)]("images\critic_log.png")
 ![Fig 4. (a)]("images\alpha.png")
 ![Fig 4. (b)]("images\alpha_log.png")
-![Fig 5. (a)]("images\1.png")
-![Fig 5. (b)]("images\2.png")
-![Fig 5. (c)]("images\3.png")
+![Fig 5. (a)](images/1.png)
+![Fig 5. (b)](images/2.png)
+![Fig 5. (c)](images/3.png)
 
 ### Reference
 [1] Jinsung Yoon, James Jordon and Mihaela van der Schaar, "GAIN: Missing Data Imputation using Generative Adversarial Nets", ICML 2018, [Online] available https://arxiv.org/abs/1806.02920
