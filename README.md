@@ -40,16 +40,16 @@ You can download original paper[1] below here(https://arxiv.org/abs/1806.02920).
 - 2026.04.07. Knowledge Distillation 적용 및 성능 비교, Tunning(critic 개선, alpha 수정). Fig 2-4
 - 2026.04.09. GAIN 원본 논문을 참조하여 데이터셋과 비교용 classic imputation method(Auto Encoder, MissForest)를 추가. Fig 5
 
-![Fig 1. WGAN](../../OneDrive/Desktop/Study/01.%20%EB%8C%80%ED%95%99%EC%9B%90%20%EC%88%98%EC%97%85/02.%20Special%20Topics%20in%20Data%20Science%28%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%82%AC%EC%9D%B4%EC%96%B8%EC%8A%A4%20%ED%8A%B9%EA%B0%95%29_%EA%B0%95%EB%84%A4%EC%9D%B4%ED%8A%B8%20%EA%B5%90%EC%88%98%EB%8B%98/02.%20Team%20Project/results_spam_Wgan%EB%A7%8C%20%EC%A0%81%EC%9A%A9%20%EB%B0%8F%20%EB%B9%84%EA%B5%90.png)
-![Fig 2. (a)](../../OneDrive/Desktop/Study/01.%20%EB%8C%80%ED%95%99%EC%9B%90%20%EC%88%98%EC%97%85/02.%20Special%20Topics%20in%20Data%20Science%28%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%82%AC%EC%9D%B4%EC%96%B8%EC%8A%A4%20%ED%8A%B9%EA%B0%95%29_%EA%B0%95%EB%84%A4%EC%9D%B4%ED%8A%B8%20%EA%B5%90%EC%88%98%EB%8B%98/02.%20Team%20Project/results_kd_spam_%EC%B2%98%EC%9D%8C%20kd%EA%B9%8C%EC%A7%80%20%EC%A0%81%EC%9A%A9.png)
-![Fig 2. (b)](../../OneDrive/Desktop/Study/01.%20%EB%8C%80%ED%95%99%EC%9B%90%20%EC%88%98%EC%97%85/02.%20Special%20Topics%20in%20Data%20Science%28%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%82%AC%EC%9D%B4%EC%96%B8%EC%8A%A4%20%ED%8A%B9%EA%B0%95%29_%EA%B0%95%EB%84%A4%EC%9D%B4%ED%8A%B8%20%EA%B5%90%EC%88%98%EB%8B%98/02.%20Team%20Project/results_kd_spam_%EC%B2%98%EC%9D%8C%20kd%EA%B9%8C%EC%A7%80%20%EC%A0%81%EC%9A%A9%20%281%29.png)
-![Fig 3. (a)](../../OneDrive/Desktop/Study/01.%20%EB%8C%80%ED%95%99%EC%9B%90%20%EC%88%98%EC%97%85/02.%20Special%20Topics%20in%20Data%20Science%28%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%82%AC%EC%9D%B4%EC%96%B8%EC%8A%A4%20%ED%8A%B9%EA%B0%95%29_%EA%B0%95%EB%84%A4%EC%9D%B4%ED%8A%B8%20%EA%B5%90%EC%88%98%EB%8B%98/02.%20Team%20Project/results_kd_spam_critic%20%EA%B0%9C%EC%84%A0.png)
-![Fig 3. (b)](../../OneDrive/Desktop/Study/01.%20%EB%8C%80%ED%95%99%EC%9B%90%20%EC%88%98%EC%97%85/02.%20Special%20Topics%20in%20Data%20Science%28%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%82%AC%EC%9D%B4%EC%96%B8%EC%8A%A4%20%ED%8A%B9%EA%B0%95%29_%EA%B0%95%EB%84%A4%EC%9D%B4%ED%8A%B8%20%EA%B5%90%EC%88%98%EB%8B%98/02.%20Team%20Project/results_kd_spam%20Critic%20%EA%B0%9C%EC%84%A0%20%281%29.png)
-![Fig 4. (a)](../../OneDrive/Desktop/Study/01.%20%EB%8C%80%ED%95%99%EC%9B%90%20%EC%88%98%EC%97%85/02.%20Special%20Topics%20in%20Data%20Science%28%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%82%AC%EC%9D%B4%EC%96%B8%EC%8A%A4%20%ED%8A%B9%EA%B0%95%29_%EA%B0%95%EB%84%A4%EC%9D%B4%ED%8A%B8%20%EA%B5%90%EC%88%98%EB%8B%98/02.%20Team%20Project/results_kd_spam%20alpha%20%EC%88%98%EC%A0%95.png)
-![Fig 4. (b)](../../OneDrive/Desktop/Study/01.%20%EB%8C%80%ED%95%99%EC%9B%90%20%EC%88%98%EC%97%85/02.%20Special%20Topics%20in%20Data%20Science%28%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%82%AC%EC%9D%B4%EC%96%B8%EC%8A%A4%20%ED%8A%B9%EA%B0%95%29_%EA%B0%95%EB%84%A4%EC%9D%B4%ED%8A%B8%20%EA%B5%90%EC%88%98%EB%8B%98/02.%20Team%20Project/results_kd_spam%20alpha%20%EC%88%98%EC%A0%95%20%281%29.png)
-![Fig 5. (a)](../../OneDrive/Desktop/Study/01.%20%EB%8C%80%ED%95%99%EC%9B%90%20%EC%88%98%EC%97%85/02.%20Special%20Topics%20in%20Data%20Science%28%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%82%AC%EC%9D%B4%EC%96%B8%EC%8A%A4%20%ED%8A%B9%EA%B0%95%29_%EA%B0%95%EB%84%A4%EC%9D%B4%ED%8A%B8%20%EA%B5%90%EC%88%98%EB%8B%98/02.%20Team%20Project/1.png)
-![Fig 5. (b)](../../OneDrive/Desktop/Study/01.%20%EB%8C%80%ED%95%99%EC%9B%90%20%EC%88%98%EC%97%85/02.%20Special%20Topics%20in%20Data%20Science%28%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%82%AC%EC%9D%B4%EC%96%B8%EC%8A%A4%20%ED%8A%B9%EA%B0%95%29_%EA%B0%95%EB%84%A4%EC%9D%B4%ED%8A%B8%20%EA%B5%90%EC%88%98%EB%8B%98/02.%20Team%20Project/2.png)
-![Fig 5. (c)](../../OneDrive/Desktop/Study/01.%20%EB%8C%80%ED%95%99%EC%9B%90%20%EC%88%98%EC%97%85/02.%20Special%20Topics%20in%20Data%20Science%28%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%82%AC%EC%9D%B4%EC%96%B8%EC%8A%A4%20%ED%8A%B9%EA%B0%95%29_%EA%B0%95%EB%84%A4%EC%9D%B4%ED%8A%B8%20%EA%B5%90%EC%88%98%EB%8B%98/02.%20Team%20Project/3.png)
+![Fig 1.]("images\WGAN.png")
+![Fig 2. (a)]("images\KD.png")
+![Fig 2. (b)]("images\KD_log.png")
+![Fig 3. (a)]("images\critic.png")
+![Fig 3. (b)]("images\critic_log.png")
+![Fig 4. (a)]("images\alpha.png")
+![Fig 4. (b)]("images\alpha_log.png")
+![Fig 5. (a)]("images\1.png")
+![Fig 5. (b)]("images\2.png")
+![Fig 5. (c)]("images\3.png")
 
 ### Reference
 [1] Jinsung Yoon, James Jordon and Mihaela van der Schaar, "GAIN: Missing Data Imputation using Generative Adversarial Nets", ICML 2018, [Online] available https://arxiv.org/abs/1806.02920
