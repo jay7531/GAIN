@@ -41,15 +41,25 @@ You can download original paper[1] below here(https://arxiv.org/abs/1806.02920).
 - 2026.04.09. GAIN 원본 논문을 참조하여 데이터셋과 비교용 classic imputation method(Auto Encoder, MissForest)를 추가. Fig 5
 
 ![Fig 1.](images/WGAN.png)
+Fig 1.
 ![Fig 2. (a)](images/KD.png)
+Fig 2. (a)
 ![Fig 2. (b)](images/KD_log.png)
+Fig 2. (b)
 ![Fig 3. (a)](images/critic.png)
+Fig 3. (a)
 ![Fig 3. (b)](images/critic_log.png)
+Fig 3. (b)
 ![Fig 4. (a)](images/alpha.png)
+Fig 4. (a)
 ![Fig 4. (b)](images/alpha_log.png)
+Fig 4. (b)
 ![Fig 5. (a)](images/1.png)
+Fig 5. (a)
 ![Fig 5. (b)](images/2.png)
+Fig 5. (b)
 ![Fig 5. (c)](images/3.png)
+Fig 5. (c)
 
 ### Reference
 [1] Jinsung Yoon, James Jordon and Mihaela van der Schaar, "GAIN: Missing Data Imputation using Generative Adversarial Nets", ICML 2018, [Online] available https://arxiv.org/abs/1806.02920
