@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+import os
 import time
 import numpy as np
 import torch
@@ -13,14 +14,13 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from sklearn.metrics import roc_auc_score
 
-from data_loader import data_loader
+from data_loader_light import data_loader
 from gain import gain                                        # 원본 gain.py 유지
-from gain_original_with_history import gain_with_history
-from gain_wgan import gain_wgan
+from model_WGAIN import gain_wgan
 from gain_kd import (train_teacher_original, train_teacher_wgan,
                      train_student_kd, inference, count_parameters)
-from gain_autoencoder import gain_autoencoder
-from gain_missforest import gain_missforest
+from model_autoencoder import gain_autoencoder
+from model_missforest import gain_missforest
 from utils import normalization, rmse_loss
 
 DATASETS = ['breast', 'spam', 'letter', 'credit', 'news']
@@ -304,6 +304,7 @@ def plot_results(all_results, param_info, save_path):
              fontsize=7.5, verticalalignment='top', fontfamily='monospace',
              bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.9))
 
+    os.makedirs(os.path.dirname(save_path) or '.', exist_ok=True)
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     print(f'\n[그래프 저장] → {save_path}')
 
@@ -421,14 +422,14 @@ def main(args):
     print_summary_table(all_results, param_info)
 
     # ── 그래프 저장 ───────────────────────────────────────────────
-    plot_results(all_results, param_info, save_path='images/results_full.png')
+    plot_results(all_results, param_info, save_path='images/results_light_all_missrate80.png')
 
     return all_results
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--miss_rate',   default=0.2,   type=float)
+    parser.add_argument('--miss_rate',   default=0.8,   type=float)
     parser.add_argument('--batch_size',  default=128,   type=int)
     parser.add_argument('--hint_rate',   default=0.9,   type=float)
     parser.add_argument('--alpha',       default=100,   type=float)

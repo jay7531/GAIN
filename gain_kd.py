@@ -1,7 +1,18 @@
 # coding=utf-8
-# Knowledge Distillation for GAIN
-# 시나리오 1: Original GAIN Teacher → Student Original GAIN
-# 시나리오 2: WGAN-GP GAIN Teacher  → Student WGAN-GP GAIN
+# gain_kd.py
+# ─────────────────────────────────────────────────────────────────────
+# 이 파일 하나로 아래 역할을 모두 담당합니다:
+#   1. gain_original_with_history.py (삭제됨) 의 역할
+#      → train_teacher_original(..., return_history=True) 로 대체
+#   2. Teacher 학습: Original GAIN / WGAN-GP GAIN
+#   3. Student 학습: Knowledge Distillation (Original / WGAN-GP)
+#   4. 공통 Inference
+#
+# [gain.py 와의 관계]
+#   gain.py 의 gain() 함수는 외부(main)에서 "원본 코드 직접 호출 확인"
+#   용도로만 사용됩니다. 실제 Teacher 학습은 이 파일의
+#   train_teacher_original() 을 사용합니다.
+# ─────────────────────────────────────────────────────────────────────
 
 import numpy as np
 import torch
@@ -14,11 +25,11 @@ from utils import binary_sampler, uniform_sampler, sample_batch_index
 
 
 # ══════════════════════════════════════════════════════════════════════
-# 공통 네트워크 (h_dim으로 크기 조절 → Teacher/Student 동일 클래스 사용)
+# 공통 네트워크 (h_dim으로 Teacher/Student 크기 분기)
 # ══════════════════════════════════════════════════════════════════════
 
 class GAINGenerator(nn.Module):
-    '''Teacher/Student 공용 Generator. h_dim으로 크기 결정.'''
+    '''Teacher/Student 공용 Generator.'''
     def __init__(self, dim, h_dim):
         super().__init__()
         self.net = nn.Sequential(
@@ -36,7 +47,7 @@ class GAINGenerator(nn.Module):
 
 
 class GAINDiscriminator(nn.Module):
-    '''Teacher/Student 공용 Discriminator (Original GAIN용, Sigmoid 포함).'''
+    '''Original GAIN용 Discriminator (Sigmoid 포함).'''
     def __init__(self, dim, h_dim):
         super().__init__()
         self.net = nn.Sequential(
@@ -54,13 +65,13 @@ class GAINDiscriminator(nn.Module):
 
 
 class WGANCritic(nn.Module):
-    '''Teacher/Student 공용 Critic (WGAN-GP용, Sigmoid 없음).'''
+    '''WGAN-GP용 Critic (Sigmoid 없음).'''
     def __init__(self, dim, h_dim):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(dim * 2, h_dim), nn.ReLU(),
             nn.Linear(h_dim, h_dim),   nn.ReLU(),
-            nn.Linear(h_dim, dim)      # Sigmoid 없음
+            nn.Linear(h_dim, dim)      # Sigmoid 없음 — WGAN 핵심
         )
         for l in self.net:
             if isinstance(l, nn.Linear):
@@ -72,15 +83,16 @@ class WGANCritic(nn.Module):
 
 
 def count_parameters(model):
-    '''모델 파라미터 수 반환 (frozen 여부 무관하게 전체 카운트).'''
+    '''파라미터 수 반환 (frozen 여부 무관).'''
     return sum(p.numel() for p in model.parameters())
 
 
 # ══════════════════════════════════════════════════════════════════════
-# Gradient Penalty (WGAN-GP용)
+# Gradient Penalty (WGAN-GP)
 # ══════════════════════════════════════════════════════════════════════
 
 def compute_gradient_penalty(critic, real, fake, hint, device):
+    '''WGAN-GP gradient penalty: (||∇|| - 1)²'''
     batch_size = real.size(0)
     alpha = torch.rand(batch_size, 1, device=device).expand_as(real)
     interpolated = (alpha * real + (1 - alpha) * fake).requires_grad_(True)
@@ -90,16 +102,22 @@ def compute_gradient_penalty(critic, real, fake, hint, device):
         grad_outputs=torch.ones_like(c_out),
         create_graph=True, retain_graph=True, only_inputs=True
     )[0]
-    grad_norm = grads.view(batch_size, -1).norm(2, dim=1)
-    return ((grad_norm - 1) ** 2).mean()
+    return ((grads.view(batch_size, -1).norm(2, dim=1) - 1) ** 2).mean()
 
 
 # ══════════════════════════════════════════════════════════════════════
-# STEP 1 — Teacher 학습 (Original GAIN)
+# Teacher: Original GAIN
+# (구 gain_original_with_history.py 의 gain_with_history() 역할 통합)
 # ══════════════════════════════════════════════════════════════════════
 
-def train_teacher_original(data_x, params, device):
-    '''Original GAIN Teacher 학습. h_dim = dim (full size).'''
+def train_teacher_original(data_x, params, device, return_history=False):
+    '''Original GAIN Teacher 학습. h_dim = dim (full size).
+
+    Args:
+        return_history: True이면 (G, norm_data_x, data_m, norm_params, history)
+                        False이면 (G, norm_data_x, data_m, norm_params)
+                        → gain_original_with_history.py 를 대체
+    '''
     data_m  = 1 - np.isnan(data_x)
     no, dim = data_x.shape
     h_dim   = dim  # Teacher: full size
@@ -111,6 +129,8 @@ def train_teacher_original(data_x, params, device):
     D = GAINDiscriminator(dim, h_dim).to(device)
     G_opt = optim.Adam(G.parameters())
     D_opt = optim.Adam(D.parameters())
+
+    history = {'d_loss': [], 'g_loss': [], 'mse_loss': []}
 
     for it in tqdm(range(params['iterations']), desc='[Teacher] Original GAIN'):
         idx  = sample_batch_index(no, params['batch_size'])
@@ -126,8 +146,7 @@ def train_teacher_original(data_x, params, device):
 
         # D step
         D.train(); G.eval()
-        with torch.no_grad():
-            Gs = G(Xt, Mt)
+        with torch.no_grad(): Gs = G(Xt, Mt)
         Hat_X  = Xt * Mt + Gs * (1 - Mt)
         D_prob = D(Hat_X.detach(), Ht)
         D_loss = -torch.mean(Mt * torch.log(D_prob + 1e-8) +
@@ -139,20 +158,28 @@ def train_teacher_original(data_x, params, device):
         Gs     = G(Xt, Mt)
         Hat_X  = Xt * Mt + Gs * (1 - Mt)
         D_prob = D(Hat_X, Ht)
-        G_loss = -torch.mean((1 - Mt) * torch.log(D_prob + 1e-8)) + \
-                 params['alpha'] * torch.mean((Mt * Xt - Mt * Gs) ** 2) / torch.mean(Mt)
+        MSE    = torch.mean((Mt * Xt - Mt * Gs) ** 2) / torch.mean(Mt)
+        G_loss = -torch.mean((1 - Mt) * torch.log(D_prob + 1e-8)) + params['alpha'] * MSE
         G_opt.zero_grad(); G_loss.backward(); G_opt.step()
 
+        if (it + 1) % 100 == 0:
+            history['d_loss'].append(D_loss.item())
+            history['g_loss'].append(G_loss.item())
+            history['mse_loss'].append(MSE.item())
+
     G.eval()
-    print(f'  Teacher (Original GAIN) 파라미터 수: {count_parameters(G):,}')
+    print(f'  Teacher (Original GAIN) params: {count_parameters(G):,}')
+
+    if return_history:
+        return G, norm_data_x, data_m, norm_params, history
     return G, norm_data_x, data_m, norm_params
 
 
 # ══════════════════════════════════════════════════════════════════════
-# STEP 2 — Teacher 학습 (WGAN-GP GAIN)
+# Teacher: WGAN-GP GAIN
 # ══════════════════════════════════════════════════════════════════════
 
-def train_teacher_wgan(data_x, params, device):
+def train_teacher_wgan(data_x, params, device, return_history=False):
     '''WGAN-GP GAIN Teacher 학습. h_dim = dim (full size).'''
     data_m  = 1 - np.isnan(data_x)
     no, dim = data_x.shape
@@ -168,8 +195,10 @@ def train_teacher_wgan(data_x, params, device):
 
     n_critic  = params.get('n_critic', 5)
     lambda_gp = params.get('lambda_gp', 10)
+    history   = {'c_loss': [], 'g_loss': [], 'mse_loss': []}
 
     for it in tqdm(range(params['iterations']), desc='[Teacher] WGAN-GP GAIN'):
+        c_loss_accum = 0.0
         for _ in range(n_critic):
             idx  = sample_batch_index(no, params['batch_size'])
             X_mb = norm_data_x[idx, :]
@@ -183,15 +212,15 @@ def train_teacher_wgan(data_x, params, device):
             Ht = torch.tensor(H_mb, dtype=torch.float32).to(device)
 
             C.train(); G.eval()
-            with torch.no_grad():
-                Gs = G(Xt, Mt)
-            real = Xt * Mt + Gs * (1 - Mt)
-            fake = Gs
+            with torch.no_grad(): Gs = G(Xt, Mt)
+            real   = Xt * Mt + Gs * (1 - Mt)
+            fake   = Gs
             W_dist = torch.mean(Mt * C(real.detach(), Ht)) - \
                      torch.mean(Mt * C(fake.detach(), Ht))
             gp     = compute_gradient_penalty(C, real.detach(), fake.detach(), Ht, device)
             C_loss = -W_dist + lambda_gp * gp
             C_opt.zero_grad(); C_loss.backward(); C_opt.step()
+            c_loss_accum += C_loss.item()
 
         idx  = sample_batch_index(no, params['batch_size'])
         X_mb = norm_data_x[idx, :]
@@ -205,55 +234,55 @@ def train_teacher_wgan(data_x, params, device):
         Ht = torch.tensor(H_mb, dtype=torch.float32).to(device)
 
         G.train(); C.eval()
-        Gs      = G(Xt, Mt)
-        Hat_X   = Xt * Mt + Gs * (1 - Mt)
-        G_loss  = -torch.mean((1 - Mt) * C(Hat_X, Ht)) + \
-                  params['alpha'] * torch.mean((Mt * Xt - Mt * Gs) ** 2) / torch.mean(Mt)
+        Gs    = G(Xt, Mt)
+        Hat_X = Xt * Mt + Gs * (1 - Mt)
+        MSE   = torch.mean((Mt * Xt - Mt * Gs) ** 2) / torch.mean(Mt)
+        G_loss = -torch.mean((1 - Mt) * C(Hat_X, Ht)) + params['alpha'] * MSE
         G_opt.zero_grad(); G_loss.backward(); G_opt.step()
 
+        if (it + 1) % 100 == 0:
+            history['c_loss'].append(c_loss_accum / n_critic)
+            history['g_loss'].append(G_loss.item())
+            history['mse_loss'].append(MSE.item())
+
     G.eval()
-    print(f'  Teacher (WGAN-GP GAIN) 파라미터 수: {count_parameters(G):,}')
+    print(f'  Teacher (WGAN-GP GAIN) params: {count_parameters(G):,}')
+
+    if return_history:
+        return G, norm_data_x, data_m, norm_params, history
     return G, norm_data_x, data_m, norm_params
 
 
 # ══════════════════════════════════════════════════════════════════════
-# STEP 3 — Student 학습 with Knowledge Distillation
+# Student + Knowledge Distillation
 # ══════════════════════════════════════════════════════════════════════
 
 def train_student_kd(data_x, teacher_G, params, use_wgan, device,
                      temperature=2.0, kd_weight=0.5):
-    '''Knowledge Distillation으로 Student Generator 학습.
+    '''KD로 Student Generator 학습. Student h_dim = dim // 2 (0.5배).
 
-    Student Loss = kd_weight     * KD_Loss     (Teacher soft targets 모방)
-                 + (1-kd_weight) * Task_Loss    (실제 복원 성능)
-
-    Args:
-        teacher_G  : 학습된 Teacher Generator (frozen)
-        use_wgan   : True → Student도 WGAN-GP 방식, False → Original 방식
-        temperature: Soft target 부드럽게 만드는 온도 파라미터
-        kd_weight  : KD Loss 가중치 (0~1)
+    Student Loss = kd_weight     * KD Loss   (Teacher soft target 모방)
+                 + (1-kd_weight) * Task Loss  (관측값 복원 MSE)
+                 + alpha         * Adv Loss   (GAN 적대 학습)
     '''
     data_m  = 1 - np.isnan(data_x)
     no, dim = data_x.shape
-    h_dim_s = max(dim // 4, 8)  # Student: 1/4 크기 (최소 8)
+    h_dim_s = max(dim // 2, 8)  # Student: 0.5배 (최소 8)
 
     norm_data, norm_params = normalization(data_x)
     norm_data_x = np.nan_to_num(norm_data, nan=0.0)
 
-    # Student Generator (1/4 크기)
     S_G = GAINGenerator(dim, h_dim_s).to(device)
-
-    # Student Discriminator/Critic
     if use_wgan:
-        S_D   = WGANCritic(dim, h_dim_s).to(device)
+        S_D     = WGANCritic(dim, h_dim_s).to(device)
         S_G_opt = optim.Adam(S_G.parameters(), lr=1e-4, betas=(0.5, 0.9))
         S_D_opt = optim.Adam(S_D.parameters(), lr=1e-4, betas=(0.5, 0.9))
     else:
-        S_D   = GAINDiscriminator(dim, h_dim_s).to(device)
+        S_D     = GAINDiscriminator(dim, h_dim_s).to(device)
         S_G_opt = optim.Adam(S_G.parameters())
         S_D_opt = optim.Adam(S_D.parameters())
 
-    # Teacher는 frozen
+    # Teacher frozen
     teacher_G.eval()
     for p in teacher_G.parameters():
         p.requires_grad = False
@@ -261,15 +290,13 @@ def train_student_kd(data_x, teacher_G, params, use_wgan, device,
     n_critic  = params.get('n_critic', 5)
     lambda_gp = params.get('lambda_gp', 10)
     desc      = '[Student-KD] WGAN-GP' if use_wgan else '[Student-KD] Original'
-
-    kd_losses   = []
-    task_losses = []
+    kd_losses, task_losses = [], []
 
     for it in tqdm(range(params['iterations']), desc=desc):
 
         d_steps = n_critic if use_wgan else 1
 
-        # ── Discriminator / Critic 업데이트 ──────────────────────
+        # ── D/C 업데이트 ──────────────────────────────────────────
         for _ in range(d_steps):
             idx  = sample_batch_index(no, params['batch_size'])
             X_mb = norm_data_x[idx, :]
@@ -283,25 +310,21 @@ def train_student_kd(data_x, teacher_G, params, use_wgan, device,
             Ht = torch.tensor(H_mb, dtype=torch.float32).to(device)
 
             S_D.train(); S_G.eval()
-            with torch.no_grad():
-                S_Gs = S_G(Xt, Mt)
-
+            with torch.no_grad(): S_Gs = S_G(Xt, Mt)
             Hat_X = Xt * Mt + S_Gs * (1 - Mt)
 
             if use_wgan:
-                fake   = S_Gs
                 W_dist = torch.mean(Mt * S_D(Hat_X.detach(), Ht)) - \
-                         torch.mean(Mt * S_D(fake.detach(), Ht))
-                gp     = compute_gradient_penalty(S_D, Hat_X.detach(), fake.detach(), Ht, device)
+                         torch.mean(Mt * S_D(S_Gs.detach(), Ht))
+                gp     = compute_gradient_penalty(S_D, Hat_X.detach(), S_Gs.detach(), Ht, device)
                 D_loss = -W_dist + lambda_gp * gp
             else:
                 D_prob = S_D(Hat_X.detach(), Ht)
                 D_loss = -torch.mean(Mt * torch.log(D_prob + 1e-8) +
                                      (1 - Mt) * torch.log(1 - D_prob + 1e-8))
-
             S_D_opt.zero_grad(); D_loss.backward(); S_D_opt.step()
 
-        # ── Generator 업데이트 (KD Loss 포함) ────────────────────
+        # ── G 업데이트 (KD Loss 포함) ─────────────────────────────
         idx  = sample_batch_index(no, params['batch_size'])
         X_mb = norm_data_x[idx, :]
         M_mb = data_m[idx, :]
@@ -314,37 +337,22 @@ def train_student_kd(data_x, teacher_G, params, use_wgan, device,
         Ht = torch.tensor(H_mb, dtype=torch.float32).to(device)
 
         S_G.train(); S_D.eval()
-
-        # Teacher soft targets (no grad)
-        with torch.no_grad():
-            T_out = teacher_G(Xt, Mt)  # Teacher 예측값
-
-        # Student 예측값
+        with torch.no_grad(): T_out = teacher_G(Xt, Mt)
         S_out = S_G(Xt, Mt)
         Hat_X = Xt * Mt + S_out * (1 - Mt)
 
-        # ── KD Loss: Teacher soft target과 Student 출력 간 MSE ──
-        # missing 위치에서만 Teacher를 모방
-        kd_loss = torch.mean(
-            (1 - Mt) * (S_out / temperature - T_out / temperature) ** 2
-        )
-
-        # ── Task Loss: 관측값 복원 MSE ──────────────────────────
+        # KD Loss: missing 위치에서 Teacher soft target 모방
+        kd_loss  = torch.mean((1 - Mt) * (S_out / temperature - T_out / temperature) ** 2)
+        # Task Loss: 관측 위치 복원 MSE
         mse_task = torch.mean((Mt * Xt - Mt * S_out) ** 2) / torch.mean(Mt)
-
-        # ── Adversarial Loss ─────────────────────────────────────
+        # Adversarial Loss
         if use_wgan:
             adv_loss = -torch.mean((1 - Mt) * S_D(Hat_X, Ht))
         else:
             D_prob   = S_D(Hat_X, Ht)
             adv_loss = -torch.mean((1 - Mt) * torch.log(D_prob + 1e-8))
 
-        # ── 최종 Generator Loss ──────────────────────────────────
-        # KD Loss + Task Loss + Adversarial Loss
-        G_loss = kd_weight       * kd_loss + \
-                 (1 - kd_weight) * mse_task + \
-                 params['alpha'] * adv_loss
-
+        G_loss = kd_weight * kd_loss + (1 - kd_weight) * mse_task + params['alpha'] * adv_loss
         S_G_opt.zero_grad(); G_loss.backward(); S_G_opt.step()
 
         if (it + 1) % 100 == 0:
@@ -356,14 +364,13 @@ def train_student_kd(data_x, teacher_G, params, use_wgan, device,
     s_params = count_parameters(S_G)
     t_params = count_parameters(teacher_G)
     ratio    = (s_params / t_params * 100) if t_params > 0 else 0.0
-    print(f'  Student ({mode}, KD) 파라미터 수: {s_params:,}  '
-          f'(Teacher 대비 {ratio:.1f}%)')
+    print(f'  Student ({mode}) params: {s_params:,}  (Teacher 대비 {ratio:.1f}%)')
 
     return S_G, norm_data_x, data_m, norm_params, kd_losses, task_losses
 
 
 # ══════════════════════════════════════════════════════════════════════
-# Inference 공통 함수
+# 공통 Inference
 # ══════════════════════════════════════════════════════════════════════
 
 def inference(G, norm_data_x, data_m, norm_params, data_x, device):
@@ -374,10 +381,8 @@ def inference(G, norm_data_x, data_m, norm_params, data_x, device):
     X_mb    = data_m * norm_data_x + (1 - data_m) * Z_mb
     Xt      = torch.tensor(X_mb, dtype=torch.float32).to(device)
     Mt      = torch.tensor(data_m, dtype=torch.float32).to(device)
-
     with torch.no_grad():
         imputed = G(Xt, Mt).cpu().numpy()
-
     imputed = data_m * norm_data_x + (1 - data_m) * imputed
     imputed = renormalization(imputed, norm_params)
     imputed = rounding(imputed, data_x)
